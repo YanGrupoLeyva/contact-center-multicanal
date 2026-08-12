@@ -161,6 +161,25 @@ userSwitcher.querySelectorAll('[data-switch-user]').forEach(b=>b.onclick=()=>app
 document.querySelector('#restoreUser').onclick=()=>applyUserExperience(platformUsers[0]);
 agentCompanySelect.onchange=e=>{refreshAgentFilter();renderActiveCampaigns();syncCompany(e.target.value);toast(`Campañas activas de ${e.target.value}`)};
 activeCampaignAgent.onchange=()=>{renderActiveCampaigns();toast(activeCampaignAgent.value?`Campañas filtradas por ${activeCampaignAgent.value}`:'Mostrando todos los agentes')};
+
+// Rol Líder Call Center: supervisión operativa, asignación de campañas y KPI exclusivos de Call Center.
+document.querySelector('#userRole').insertAdjacentHTML('beforeend','<option>Líder Call Center</option>');
+document.querySelector('#rolesSettings .role-card:nth-of-type(2)').insertAdjacentHTML('afterend','<div class="role-card"><div><h3>Líder Call Center</h3><p>Asigna campañas, supervisa a los agentes y consulta exclusivamente los KPI de Call Center en las empresas asignadas.</p></div><span class="badge blue">0 usuarios</span></div>');
+roleViews['Líder Call Center']=['tasks','crm','admin','agent','whatsapp','email','calls','socials','kpis'];
+const baseApplyRolePermissions=applyRolePermissions;
+applyRolePermissions=function(role,companies=''){
+  if(role!=='Líder Call Center')return baseApplyRolePermissions(role,companies);
+  companyPermissionInputs.forEach(input=>{input.disabled=false;input.checked=companies==='Todas'||companies.split(',').includes(input.parentElement.textContent.trim())});
+  const allowedModules=['Mis Tareas','CRM','Canales',"KPI's",'Gestionar Campañas','Campañas Activas'];
+  modulePermissionInputs.forEach(input=>{input.checked=allowedModules.includes(input.parentElement.textContent.trim());input.disabled=true});
+  document.querySelector('#companyPermissionText').textContent='Selecciona las empresas cuyos agentes y campañas podrá supervisar.';
+  document.querySelector('#modulePermissionText').textContent='Puede gestionar y supervisar campañas, trabajar los canales y consultar exclusivamente KPI de Call Center.';
+  document.querySelector('#permissionHint').textContent='Líder Call Center: permisos operativos de supervisión';
+};
+refreshAgentFilter=function(){const privileged=['Superusuario','Director','Líder Call Center'].includes(sessionUser.role),company=agentCompanySelect.value;activeCampaignAgent.style.display=privileged?'block':'none';activeCampaignAgent.innerHTML=privileged?'<option value="">Todos los agentes</option>'+availableAgents(company).map(a=>`<option>${a}</option>`).join(''):`<option>${sessionUser.name}</option>`;activeCampaignAgent.value=privileged?'':sessionUser.name};
+renderActiveCampaigns=function(){const company=agentCompanySelect.value,privileged=['Superusuario','Director','Líder Call Center'].includes(sessionUser.role),agent=privileged?activeCampaignAgent.value:sessionUser.name;const assigned=clients.filter(c=>c[5]===company&&(!agent||c[1]===agent));document.querySelector('#agentContacts').innerHTML=assigned.map((c,i)=>`<div class="contact ${i===0?'active':''}"><div class="mini-avatar">${c[0].split(' ').map(x=>x[0]).join('').slice(0,2)}</div><div class="contact-info"><b>${c[0]}</b><span>${c[1]} · ${c[3]} · ${c[2]}</span></div><span class="time">${c[4]}</span></div>`).join('')||'<div style="padding:20px;color:var(--muted);font-size:11px">No hay contactos para este agente en la empresa seleccionada.</div>';document.querySelector('#agentCompanyName').textContent=company;document.querySelector('#agentCampaignSummary').textContent=`${assigned.length} contactos · ${agent||'Todos los agentes'} · ${company}`};
+const baseApplyUserExperience=applyUserExperience;
+applyUserExperience=function(user){baseApplyUserExperience(user);const leader=user.role==='Líder Call Center',area=document.querySelector('#kpiArea');[...area.options].forEach(option=>option.hidden=leader&&option.value!=='callcenter');area.disabled=leader;if(leader){area.value='callcenter';renderKpis()}};
 applyUserExperience(sessionUser);
 </script>
 </body></html>
